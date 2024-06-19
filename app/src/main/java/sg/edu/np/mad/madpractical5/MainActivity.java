@@ -2,88 +2,67 @@ package sg.edu.np.mad.madpractical5;
 
 import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
+import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends AppCompatActivity {
+
+    private Button buttonFollow;
+    private TextView tvName, tvDescription;
+    private boolean followed;
+    private User currentUser;
+    private MyDBHandler dbHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
 
-        MyDBHandler dbHandler = new MyDBHandler(this, null, null, 1);
-        Button btnLogin = findViewById(R.id.btnLogin);
-        Button btnRegister = findViewById(R.id.btnRegister);
+        dbHandler = new MyDBHandler(this, null, null, 1);
 
-        btnRegister.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                //Do something when Register is pressed
-                EditText etUsername = findViewById(R.id.etUsername);
-                EditText etPassword = findViewById(R.id.etPassword);
-                String username = etUsername.getText().toString();
-                String password = etPassword.getText().toString();
+        // Initialize views
+        tvName = findViewById(R.id.tvName);
+        tvDescription = findViewById(R.id.tvDescription);
+        buttonFollow = findViewById(R.id.btnFollow);
 
-                User user = new User (1, "","");
-                user = dbHandler.getUser(username);
-                if (username.equals(user.getName()))
-                {
-                    user.setPassword(password);
-                    dbHandler.updateUser(user);
-                    Toast.makeText(getApplicationContext(),"Update an existing user.",Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    user.setName(username);
-                    user.setPassword(password);
-                    dbHandler.addUser(user);
-                    Toast.makeText(getApplicationContext(),"Create a new user",Toast.LENGTH_SHORT).show();
-                }
+        // Get user information from intent
+        Intent intent = getIntent();
+        if (intent != null) {
+            currentUser = (User) intent.getSerializableExtra("user");
+            if (currentUser != null) {
+                // Set user information
+                tvName.setText(currentUser.getName());
+                tvDescription.setText(currentUser.getDescription());
+                // Set initial follow state
+                followed = currentUser.getFollowed();
+                updateButtonMessageText();
             }
-        });
+        }
 
-        btnLogin.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                //Do something when login is pressed.
-                EditText etUsername = findViewById(R.id.etUsername);
-                EditText etPassword = findViewById(R.id.etPassword);
-                String username = etUsername.getText().toString();
-                String password = etPassword.getText().toString();
-                User user = new User(1,"","");
-                user = dbHandler.getUser(username);
-
-                if(username.equals(user.getName()) && password.equals(user.getPassword())) {
-                    Toast.makeText(getApplicationContext(), "User authorized",Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(MainActivity.this,WeatherActivity.class);
-                    intent.putExtra("name", user.getName());
-                    startActivity(intent);
-                }
-                else {
-                    Toast.makeText(getApplicationContext(), "Invalid User!", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-
+        // Setup follow button click listener
+        setupFollowButton();
     }
-}
+
+    private void setupFollowButton() {
+        buttonFollow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Toggle follow state
+                currentUser.setFollowed(!currentUser.getFollowed());
+                updateButtonMessageText();
+                // Update the user in the database
+                dbHandler.updateUser(currentUser);
+                String toastMessage = currentUser.getFollowed() ? getString(R.string.button_follow_text) : getString(R.string.button_unfollow_text);
+                Toast.makeText(getApplicationContext(), toastMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void updateButtonMessageText() {
+        buttonFollow.setText(currentUser.getFollowed() ? R.string.button_unfollow_text : R.string.button_follow_text);
     }
 }

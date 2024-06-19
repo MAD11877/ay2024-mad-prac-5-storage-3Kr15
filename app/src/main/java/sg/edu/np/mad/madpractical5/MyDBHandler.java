@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
+import java.util.Random;
+
 import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
@@ -16,7 +18,8 @@ public class MyDBHandler extends SQLiteOpenHelper {
     private static final String USERS = "users";
     private static final String COLUMN_ID = "id";
     private static final String COLUMN_NAME = "name";
-    private static final String COLUMN_PASSWORD = "password";
+    private static final String COLUMN_DESCRIPTION = "description";
+    private static final String COLUMN_FOLLOWED = "followed";
 
     public MyDBHandler(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, DATABASE_NAME, factory, DATABASE_VERSION);
@@ -26,18 +29,26 @@ public class MyDBHandler extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.i("Database Operations", "Creating a Table.");
         try {
-            String CREATE_USERS_TABLE = "CREATE TABLE " + USERS + "(" + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + COLUMN_NAME + " TEXT," + COLUMN_PASSWORD + " TEXT" + ")";
+            String CREATE_USERS_TABLE = "CREATE TABLE " + USERS + "(" + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + COLUMN_NAME + " TEXT," + COLUMN_DESCRIPTION + " TEXT," + COLUMN_FOLLOWED + " BOOLEAN" + ")";
             db.execSQL(CREATE_USERS_TABLE);
-            //Generate 1 Default User
-            String id = String.valueOf(1);
-            String name = "admin";
-            String password = "admin";
-            ContentValues values = new ContentValues();
-            values.put(COLUMN_NAME, name);
-            values.put(COLUMN_PASSWORD, password);
-            db.insert(USERS, null, values);
-            Log.i("Database Operations", "Table created successfully.");
-            db.close();
+
+            for (int i = 0; i < 20; i++) {
+                String name = "Name" + Math.round(Math.random() * 100000000);
+                String description = "Description" + Math.round(Math.random() * 100000000);
+                int randomNum = new Random().nextInt(2);
+                String followed = "false";
+                if (randomNum == 1) {
+                    followed = "true";
+                }
+                ContentValues values = new ContentValues();
+                values.put(COLUMN_NAME, name);
+                values.put(COLUMN_DESCRIPTION, description);
+                values.put(COLUMN_FOLLOWED, followed);
+                db.insert(USERS, null, values);
+
+                Log.i("Database Operations", "Table created successfully.");
+                db.close();
+            }
         } catch (SQLiteException e) {
             Log.i("Database Operations", "Error creating table", e);
         }
@@ -51,111 +62,58 @@ public class MyDBHandler extends SQLiteOpenHelper {
 
     //Add a user record
     public void addUser(User user) {
-        SQLiteDatabase db = getWritableDatabase();
+        SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_NAME, user.getName());
-        values.put(COLUMN_PASSWORD, user.getPassword());
+        values.put(COLUMN_DESCRIPTION, user.getDescription());
+        values.put(COLUMN_FOLLOWED, user.getFollowed());
         db.insert(USERS, null, values);
         db.close();
     }
 
-    //Get 1 user record based on user name
-    public User getUser(String username) {
-        SQLiteDatabase db = getReadableDatabase();
-        User user = new User(1, "johndoe", "password", true);
-        String query = "SELECT * FROM " + USERS + "wHERE " + COLUMN_NAME + " = \"" + username + "\"";
-        Cursor cursor = db.rawQuery(query, null);
-
-        if (cursor.moveToFirst()) {
-            user.setID(Integer.parseInt(cursor.getString(0)));
-            user.setName(cursor.getString(1));
-            user.setPassword(cursor.getString(2));
-            cursor.close();
-        }
-        db.close();
-        return user;
-    }
-
-    // Get 1 user record based on user unique id.
-    public User getrUser(int user_id) {
-        SQLiteDatabase db = getReadableDatabase();
-        User user = new User(1, "johndoe", "password", true);
-        Cursor cursor = db.query(USERS, new String[] {COLUMN_ID, COLUMN_NAME, COLUMN_PASSWORD}, COLUMN_ID + "=?",
-                new String[] { String.valueOf(user_id) }, null, null, null, null );
-
-        if(cursor != null)
-        {
-            cursor.moveToFirst();
-            int id = cursor.getInt((int)cursor.getColumnIndex("id"));
-            String name = cursor.getString((int)cursor.getColumnIndex("name"));
-            String password = cursor.getString((int)cursor.getColumnIndex("password"));
-            user.setID(id);
-            user.setName(name);
-            user.setPassword(password);
-            cursor.close();
-        }
-        db.close();
-        return user;
-    }
-
-    //READ all user records
+    //Get all users
     public ArrayList<User> getUsers() {
-        SQLiteDatabase db = getWritableDatabase();
-        ArrayList<User> userList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        ArrayList<User> users = new ArrayList<User>();
         String query = "SELECT * FROM " + USERS;
         Cursor cursor = db.rawQuery(query, null);
+        boolean follow = false;
 
         while (cursor.moveToNext()) {
-            int id = cursor.getInt((int)cursor.getColumnIndex("id"));
-            String name = cursor.getString((int)cursor.getColumnIndex("name"));
-            String password = cursor.getString((int)cursor.getColumnIndex("password"));
-            User user = new User(id, name ,password, true);
-            userList.add(user);
+            int id = cursor.getInt(0);
+            String name = cursor.getString(1);
+            String description = cursor.getString(2);
+            if(cursor.getInt(3) == 1) {
+                follow = true;
+            }
+            User user = new User(id, name, description, follow);
+            users.add(user);
         }
-        cursor.close();
         db.close();
-        return userList;
+        return users;
     }
+
+    //Read a user records
+    public User getUser(String username) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(USERS, new String[]{COLUMN_ID, COLUMN_NAME, COLUMN_DESCRIPTION, COLUMN_FOLLOWED}, COLUMN_NAME + "=?", new String[]{username}, null, null, null, null);
+        if(cursor != null) {
+            cursor.moveToFirst();
+        }
+        User user = new User(cursor.getInt(0),cursor.getString(1), cursor.getString(2), cursor.getInt(3) > 0);
+
+        db.close();
+        return user;
+    }
+
     // Update user record
     public void updateUser(User user){
-        SQLiteDatabase db = getWritableDatabase();
+        SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put(COLUMN_ID, String.valueOf(user.getID()));
-        values.put(COLUMN_NAME, user.getName());
-        values.put(COLUMN_PASSWORD, user.getPassword());
+        values.put(COLUMN_FOLLOWED, user.getFollowed());
         String clause ="id=?";
-        String[] args = {String.valueOf(user.getID())};
-        db.update(USERS, values, clause, args);
+        String[] args = {String.valueOf(user.getId())};
+        db.update(USERS, values,COLUMN_ID +  clause, args);
         db.close();
-    }
-
-    // Delete a user record
-    public boolean deleteUser(String username) {
-        boolean result = false;
-        String query = "SELECT * FROM " + USERS + " WHERE " + COLUMN_NAME + " = \"" + username + "\" ";
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(query, null);
-        User user = new User(1, "johndoe", "password", true);
-
-        if (cursor.moveToFirst()) {
-            user.setID(Integer.parseInt(cursor.getString(0)));
-            db.delete(USERS, COLUMN_ID + "= ?",
-                    new String[] {String.valueOf(user.getID())});
-            cursor.close();
-            result = true;
-        }
-        db.close();
-        return result;
-    }
-    public void deleteAllEntries() {
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.execSQL("DELETE FROM entries");
-        db.close();
-    }
-
-    @Override
-    public void close() {
-        Log.i("Daatbase Operations", "Database is closed.");
-        super.close();
     }
 }

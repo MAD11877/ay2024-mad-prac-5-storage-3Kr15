@@ -1,22 +1,26 @@
 package sg.edu.np.mad.madpractical5;
 
-public class User {
+import java.io.Serializable;
+
+public class User implements Serializable {
     private int id;
     private String name;
-    private String password;
+    private String description;
     private Boolean followed;
-    public void setID(int id) { this.id = id; }
-    public void setName(String username) { this.name = username; }
-    public void setPassword(String password) { this.password = password; }
-    public void setFollowed(Boolean followed) {this.followed = followed; }
-    public int getID() { return id; }
-    public String getName() { return name; }
-    public String getPassword() { return password; }
-    public boolean getFollowed() { return followed; }
-    public User(int id, String name, String password, boolean followed) {
+
+    public User(int id, String name, String description, boolean followed) {
         this.id = id;
         this.name = name;
-        this.password = password;
+        this.description = description;
         this.followed = followed;
     }
+
+    public void setId(int id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
+    public void setFollowed(Boolean followed) { this.followed = followed; }
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public boolean getFollowed() { return followed; }
 }

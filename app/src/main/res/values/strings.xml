@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">madpractical5</string>
+    <string name="button_follow_text">Follow</string>
+    <string name="button_unfollow_text">Unfollow</string>
 </resources>
